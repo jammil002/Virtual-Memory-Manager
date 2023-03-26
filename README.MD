@@ -2,8 +2,8 @@
 <hr />
 
 #### Run File
-###### To run this file download the executable from the release menu ->
-###### Navigate to the executable on your machine via the command line and type ./vmm
+##### To run this file download the executable from the release menu ->
+##### Navigate to the executable on your machine via the command line and type ./vmm
 #### Description
 
 This C++ program executes memory allocation for virtual memory addresses in a logical memory using a page table while simulating a paging model.
