@@ -1,27 +1,37 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <limits>
 
-using namespace std;
-
+// Functions
 void loadFiles();
 void initPageTable();
-void allocatePage(int logical_address);
-void writeToFile();
+std::string allocatePage(int logical_address);
+void writeToOutputFile(std::string output);
 
+// Global variables and constants
 const int PAGE_SIZE = 4;
-const int LOGICAL_MEMORY_SIZE = 16;                                 // 4 pages of 4 bytes each
-const int PHYSICAL_MEMORY_SIZE = 32;                                // 8 pages of 4 bytes each
-const int PAGE_TABLE_SIZE = LOGICAL_MEMORY_SIZE;                    // Sets the size of the page table to the number of pages in logical memory.
-int pageTable[PAGE_TABLE_SIZE];                                     // Sets the size of the page table to the number of pages in logical memory.
-string logicalMemory[LOGICAL_MEMORY_SIZE][PAGE_SIZE];               // Creates an array of 4 pages of 4 bytes each.
-string physicalMemory[PHYSICAL_MEMORY_SIZE / PAGE_SIZE][PAGE_SIZE]; // Divides the memory size by the page size to create an array for phyiscal memory.
+const int LOGICAL_MEMORY_SIZE = 16;
+const int PHYSICAL_MEMORY_SIZE = 32;
+const int PAGE_TABLE_SIZE = LOGICAL_MEMORY_SIZE;
+int pageTable[PAGE_TABLE_SIZE];
+std::string logicalMemory[LOGICAL_MEMORY_SIZE][PAGE_SIZE];
+std::string physicalMemory[PHYSICAL_MEMORY_SIZE / PAGE_SIZE][PAGE_SIZE];
+unsigned long accessCounter = 0;
+unsigned long lastAccess[PHYSICAL_MEMORY_SIZE / PAGE_SIZE];
 
-// Load file containing strings.
+void initPageTable()
+{
+    for (int i = 0; i < PAGE_TABLE_SIZE; i++)
+    {
+        pageTable[i] = -1;
+    }
+}
+
 void loadFiles()
 {
-    ifstream infile("input.txt");
-    string line;
+    std::ifstream infile("input.txt");
+    std::string line;
     int page_index = 0;
     int offset = 0;
     while (getline(infile, line))
@@ -36,16 +46,20 @@ void loadFiles()
     }
 }
 
-// Initialize page table using the constants set above.
-void initPageTable()
+void writeToOutputFile(std::string text)
 {
-    for (int i = 0; i < PAGE_TABLE_SIZE; i++)
-    {
-        pageTable[i] = -1;
-    }
+    std::ofstream output;
+
+    output.open("./output.txt", std::ios::out | std::ios::app);
+    if (output.fail())
+        throw std::ios_base::failure(std::strerror(errno));
+
+    output.exceptions(output.exceptions() | std::ios::failbit | std::ifstream::badbit);
+
+    output << text << std::endl;
+    output.close();
 }
 
-// Find the first free frame in physical memory. Will algorithmically find the first free frame in physical memory.
 int freeFrames()
 {
     for (int i = 0; i < PHYSICAL_MEMORY_SIZE / PAGE_SIZE; i++)
@@ -64,68 +78,82 @@ int freeFrames()
             return i;
         }
     }
-    return -1; // Return -1 if no free frames.
+    return -1;
 }
 
-// Allocate a page to physical memory. Will call freeFrames() to find the first free frame in physical memory.
-void allocatePage(int logical_address)
+// Add a function to find the least recently used frame
+int findLeastRecentlyUsedFrame()
+{
+    int minIndex = 0;
+    unsigned long minValue = std::numeric_limits<unsigned long>::max();
+
+    for (int i = 0; i < PHYSICAL_MEMORY_SIZE / PAGE_SIZE; i++)
+    {
+        if (lastAccess[i] < minValue)
+        {
+            minValue = lastAccess[i];
+            minIndex = i;
+        }
+    }
+    return minIndex;
+}
+
+std::string allocatePage(int logical_address)
 {
     int page_index = logical_address / PAGE_SIZE;
     int offset = logical_address % PAGE_SIZE;
     int frame_index = pageTable[page_index];
+
+    std::string output = ""; // Create an empty string to store the output
+
     if (frame_index == -1)
     {
         frame_index = freeFrames();
+
         if (frame_index == -1)
         {
-            cout << "Error: Physical memory full!" << endl;
-            return;
+            frame_index = findLeastRecentlyUsedFrame();
+
+            for (int i = 0; i < PAGE_TABLE_SIZE; i++)
+            {
+                if (pageTable[i] == frame_index)
+                {
+                    pageTable[i] = -1;
+                    break;
+                }
+            }
         }
+
         pageTable[page_index] = frame_index;
         for (int i = 0; i < PAGE_SIZE; i++)
         {
             physicalMemory[frame_index][i] = logicalMemory[page_index][i];
         }
-        cout << "Page fault occurred, loaded page " << page_index << " into frame " << frame_index << endl;
-    }
-    cout << "String: " << logicalMemory[page_index][offset] << " allocated to frame " << frame_index << endl;
-}
 
-// Write to file. Will write the contents of physical memory to a file.
-void writeToFile()
-{
-    ofstream outfile("output.txt");
-    for (int i = 0; i < PHYSICAL_MEMORY_SIZE / PAGE_SIZE; i++)
-    {
-        for (int j = 0; j < PAGE_SIZE; j++)
-        {
-            if (!physicalMemory[i][j].empty())
-            {
-                int logical_address = i * PAGE_SIZE + j;
-                int frame_index = pageTable[logical_address / PAGE_SIZE];
-                outfile << "String: " << physicalMemory[i][j] << " in frame " << frame_index << " allocated using ";
-                if (frame_index == logical_address / PAGE_SIZE)
-                {
-                    outfile << "optimal paging." << endl;
-                }
-                else
-                {
-                    outfile << "FIFO paging." << endl;
-                }
-            }
-        }
+        std::string page_fault_msg = "Page fault occurred, loaded page " + std::to_string(page_index) + " into frame " + std::to_string(frame_index);
+        std::cout << page_fault_msg << std::endl;
+        output += page_fault_msg + "\n"; // Append the message to the output string
     }
-    outfile.close();
+
+    accessCounter++;
+    lastAccess[frame_index] = accessCounter;
+
+    std::string allocation_msg = "String: " + logicalMemory[page_index][offset] + " allocated to frame " + std::to_string(frame_index);
+    std::cout << allocation_msg << std::endl;
+    output += allocation_msg + "\n"; // Append the message to the output string
+
+    return output;
 }
 
 int main()
 {
     loadFiles();
     initPageTable();
-    allocatePage(2);
-    allocatePage(7);
-    allocatePage(12);
-    allocatePage(1);
-    writeToFile();
+    std::string output = "";
+    output += allocatePage(2);
+    output += allocatePage(7);
+    output += allocatePage(12);
+    output += allocatePage(1);
+    writeToOutputFile(output);
     return 0;
 }
