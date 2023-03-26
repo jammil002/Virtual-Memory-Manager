@@ -1,6 +1,6 @@
 ### Virtual Memory Manager
 <hr />
-#### Run File
+### Run File
 To run this file download the executable from the release menu ->
 Navigate to the executable on your machine via the command line and type ./vmm
 #### Description
