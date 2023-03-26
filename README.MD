@@ -1,6 +1,5 @@
 ### Virtual Memory Manager
-
-<br />
+<hr />
 #### Run File
 
 #### Description
