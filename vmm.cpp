@@ -45,20 +45,21 @@ void initPageTable()
     }
 }
 
+// Find the first free frame in physical memory. Will algorithmically find the first free frame in physical memory.
 int freeFrames()
 {
     for (int i = 0; i < PHYSICAL_MEMORY_SIZE / PAGE_SIZE; i++)
     {
-        bool is_free = true;
+        bool isMemoryFree = true;
         for (int j = 0; j < PAGE_SIZE; j++)
         {
             if (physicalMemory[i][j].empty())
             {
-                is_free = false;
+                isMemoryFree = false;
                 break;
             }
         }
-        if (is_free)
+        if (isMemoryFree)
         {
             return i;
         }
@@ -66,6 +67,7 @@ int freeFrames()
     return -1; // Return -1 if no free frames.
 }
 
+// Allocate a page to physical memory. Will call freeFrames() to find the first free frame in physical memory.
 void allocatePage(int logical_address)
 {
     int page_index = logical_address / PAGE_SIZE;
@@ -89,6 +91,7 @@ void allocatePage(int logical_address)
     cout << "String: " << logicalMemory[page_index][offset] << " allocated to frame " << frame_index << endl;
 }
 
+// Write to file. Will write the contents of physical memory to a file.
 void writeToFile()
 {
     ofstream outfile("output.txt");
