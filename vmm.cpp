@@ -5,15 +5,19 @@
 using namespace std;
 
 void loadFiles();
-int page_table[PAGE_TABLE_SIZE];
+void initPageTable();
+void allocatePage(int logical_address);
+void writeToFile();
 
 const int PAGE_SIZE = 4;
-const int LOGICAL_MEMORY_SIZE = 16;  // 4 pages of 4 bytes each
-const int PHYSICAL_MEMORY_SIZE = 32; // 8 pages of 4 bytes each
-const int PAGE_TABLE_SIZE = LOGICAL_MEMORY_SIZE;
-string logical_memory[LOGICAL_MEMORY_SIZE][PAGE_SIZE];
-string physical_memory[PHYSICAL_MEMORY_SIZE / PAGE_SIZE][PAGE_SIZE];
+const int LOGICAL_MEMORY_SIZE = 16;                                 // 4 pages of 4 bytes each
+const int PHYSICAL_MEMORY_SIZE = 32;                                // 8 pages of 4 bytes each
+const int PAGE_TABLE_SIZE = LOGICAL_MEMORY_SIZE;                    // Sets the size of the page table to the number of pages in logical memory.
+int pageTable[PAGE_TABLE_SIZE];                                     // Sets the size of the page table to the number of pages in logical memory.
+string logicalMemory[LOGICAL_MEMORY_SIZE][PAGE_SIZE];               // Creates an array of 4 pages of 4 bytes each.
+string physicalMemory[PHYSICAL_MEMORY_SIZE / PAGE_SIZE][PAGE_SIZE]; // Divides the memory size by the page size to create an array for phyiscal memory.
 
+// Load file containing strings.
 void loadFiles()
 {
     ifstream infile("input.txt");
@@ -27,27 +31,28 @@ void loadFiles()
             offset = 0;
             page_index++;
         }
-        logical_memory[page_index][offset] = line;
+        logicalMemory[page_index][offset] = line;
         offset++;
     }
 }
 
-void initialize_page_table()
+// Initialize page table using the constants set above.
+void initPageTable()
 {
     for (int i = 0; i < PAGE_TABLE_SIZE; i++)
     {
-        page_table[i] = -1; // initialize all entries to -1
+        pageTable[i] = -1;
     }
 }
 
-int get_free_frame()
+int freeFrames()
 {
     for (int i = 0; i < PHYSICAL_MEMORY_SIZE / PAGE_SIZE; i++)
     {
         bool is_free = true;
         for (int j = 0; j < PAGE_SIZE; j++)
         {
-            if (physical_memory[i][j].empty())
+            if (physicalMemory[i][j].empty())
             {
                 is_free = false;
                 break;
@@ -58,44 +63,44 @@ int get_free_frame()
             return i;
         }
     }
-    return -1; // no free frame available
+    return -1; // Return -1 if no free frames.
 }
 
-void allocate_page(int logical_address)
+void allocatePage(int logical_address)
 {
     int page_index = logical_address / PAGE_SIZE;
     int offset = logical_address % PAGE_SIZE;
-    int frame_index = page_table[page_index];
+    int frame_index = pageTable[page_index];
     if (frame_index == -1)
     {
-        frame_index = get_free_frame();
+        frame_index = freeFrames();
         if (frame_index == -1)
         {
             cout << "Error: Physical memory full!" << endl;
             return;
         }
-        page_table[page_index] = frame_index;
+        pageTable[page_index] = frame_index;
         for (int i = 0; i < PAGE_SIZE; i++)
         {
-            physical_memory[frame_index][i] = logical_memory[page_index][i];
+            physicalMemory[frame_index][i] = logicalMemory[page_index][i];
         }
         cout << "Page fault occurred, loaded page " << page_index << " into frame " << frame_index << endl;
     }
-    cout << "String: " << logical_memory[page_index][offset] << " allocated to frame " << frame_index << endl;
+    cout << "String: " << logicalMemory[page_index][offset] << " allocated to frame " << frame_index << endl;
 }
 
-void write_data_to_file()
+void writeToFile()
 {
     ofstream outfile("output.txt");
     for (int i = 0; i < PHYSICAL_MEMORY_SIZE / PAGE_SIZE; i++)
     {
         for (int j = 0; j < PAGE_SIZE; j++)
         {
-            if (!physical_memory[i][j].empty())
+            if (!physicalMemory[i][j].empty())
             {
                 int logical_address = i * PAGE_SIZE + j;
-                int frame_index = page_table[logical_address / PAGE_SIZE];
-                outfile << "String: " << physical_memory[i][j] << " in frame " << frame_index << " allocated using ";
+                int frame_index = pageTable[logical_address / PAGE_SIZE];
+                outfile << "String: " << physicalMemory[i][j] << " in frame " << frame_index << " allocated using ";
                 if (frame_index == logical_address / PAGE_SIZE)
                 {
                     outfile << "optimal paging." << endl;
@@ -113,11 +118,11 @@ void write_data_to_file()
 int main()
 {
     loadFiles();
-    initialize_page_table();
-    allocate_page(2);
-    allocate_page(7);
-    allocate_page(12);
-    allocate_page(1);
-    write_data_to_file();
+    initPageTable();
+    allocatePage(2);
+    allocatePage(7);
+    allocatePage(12);
+    allocatePage(1);
+    writeToFile();
     return 0;
 }
