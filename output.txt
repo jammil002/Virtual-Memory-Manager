@@ -1,0 +1,8 @@
+Page fault occurred, loaded page 0 into frame 0
+String: WXYZ allocated to frame 0
+Page fault occurred, loaded page 1 into frame 0
+String:  allocated to frame 0
+Page fault occurred, loaded page 3 into frame 1
+String:  allocated to frame 1
+String: 1234 allocated to frame 0
+

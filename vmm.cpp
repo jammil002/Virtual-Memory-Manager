@@ -20,6 +20,7 @@ std::string physicalMemory[PHYSICAL_MEMORY_SIZE / PAGE_SIZE][PAGE_SIZE];
 unsigned long accessCounter = 0;
 unsigned long lastAccess[PHYSICAL_MEMORY_SIZE / PAGE_SIZE];
 
+// The page table is initialized by this function by setting all entries to 1.
 void initPageTable()
 {
     for (int i = 0; i < PAGE_TABLE_SIZE; i++)
@@ -28,29 +29,31 @@ void initPageTable()
     }
 }
 
+// This function reads the input file input.txt and loads the data into the logical memory.
 void loadFiles()
 {
     std::ifstream infile("input.txt");
     std::string line;
-    int page_index = 0;
+    int pageIndex = 0;
     int offset = 0;
     while (getline(infile, line))
     {
         if (offset == PAGE_SIZE)
         {
             offset = 0;
-            page_index++;
+            pageIndex++;
         }
-        logicalMemory[page_index][offset] = line;
+        logicalMemory[pageIndex][offset] = line;
         offset++;
     }
 }
 
+// The given text is appended by this function to the output file output.txt.
 void writeToOutputFile(std::string text)
 {
     std::ofstream output;
 
-    output.open("./output.txt", std::ios::out | std::ios::app);
+    output.open("output.txt", std::ios::out | std::ios::app);
     if (output.fail())
         throw std::ios_base::failure(std::strerror(errno));
 
@@ -60,6 +63,7 @@ void writeToOutputFile(std::string text)
     output.close();
 }
 
+// This function searches the physical memory for any available free frames and then returns the index of the first frame that is available. It returns -1 if there are no free frames.
 int freeFrames()
 {
     for (int i = 0; i < PHYSICAL_MEMORY_SIZE / PAGE_SIZE; i++)
@@ -98,25 +102,26 @@ int findLeastRecentlyUsedFrame()
     return minIndex;
 }
 
+// This function allocates a page to the physical memory and returns the string that is allocated to the frame.
 std::string allocatePage(int logical_address)
 {
-    int page_index = logical_address / PAGE_SIZE;
+    int pageIndex = logical_address / PAGE_SIZE;
     int offset = logical_address % PAGE_SIZE;
-    int frame_index = pageTable[page_index];
+    int frameIndex = pageTable[pageIndex];
 
     std::string output = ""; // Create an empty string to store the output
 
-    if (frame_index == -1)
+    if (frameIndex == -1)
     {
-        frame_index = freeFrames();
+        frameIndex = freeFrames();
 
-        if (frame_index == -1)
+        if (frameIndex == -1)
         {
-            frame_index = findLeastRecentlyUsedFrame();
+            frameIndex = findLeastRecentlyUsedFrame();
 
             for (int i = 0; i < PAGE_TABLE_SIZE; i++)
             {
-                if (pageTable[i] == frame_index)
+                if (pageTable[i] == frameIndex)
                 {
                     pageTable[i] = -1;
                     break;
@@ -124,27 +129,28 @@ std::string allocatePage(int logical_address)
             }
         }
 
-        pageTable[page_index] = frame_index;
+        pageTable[pageIndex] = frameIndex;
         for (int i = 0; i < PAGE_SIZE; i++)
         {
-            physicalMemory[frame_index][i] = logicalMemory[page_index][i];
+            physicalMemory[frameIndex][i] = logicalMemory[pageIndex][i];
         }
 
-        std::string page_fault_msg = "Page fault occurred, loaded page " + std::to_string(page_index) + " into frame " + std::to_string(frame_index);
+        std::string page_fault_msg = "Page fault occurred, loaded page " + std::to_string(pageIndex) + " into frame " + std::to_string(frameIndex);
         std::cout << page_fault_msg << std::endl;
         output += page_fault_msg + "\n"; // Append the message to the output string
     }
 
     accessCounter++;
-    lastAccess[frame_index] = accessCounter;
+    lastAccess[frameIndex] = accessCounter;
 
-    std::string allocation_msg = "String: " + logicalMemory[page_index][offset] + " allocated to frame " + std::to_string(frame_index);
-    std::cout << allocation_msg << std::endl;
-    output += allocation_msg + "\n"; // Append the message to the output string
+    std::string outputMessage = "String: " + logicalMemory[pageIndex][offset] + " allocated to frame " + std::to_string(frameIndex);
+    std::cout << outputMessage << std::endl;
+    output += outputMessage + "\n"; // Append the message to the output string
 
     return output;
 }
 
+// Main function
 int main()
 {
     loadFiles();
