@@ -6,6 +6,7 @@
 // Functions
 void loadFiles();
 void initPageTable();
+int findLeastRecentlyUsedFrame();
 std::string allocatePage(int logicalAddress);
 void writeToOutputFile(std::string output);
 
