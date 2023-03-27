@@ -1,3 +1,8 @@
+// James Miller
+// This is my code.
+// March 26, 2023
+// Dr.Citro
+
 #include <iostream>
 #include <fstream>
 #include <string>
